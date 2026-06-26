@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>Telegram WebApp</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: 'Inter', Arial, sans-serif;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        /* Full-screen looping background video */
+        #bgVideo {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -2;
+            background: #050505;
+            opacity: var(--video-opacity, 1);
+        }
+
+        /* Dimming layer on top of the video, opacity set from data.json */
+        #videoOverlay {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background: #000;
+            opacity: var(--overlay-opacity, 0.3);
+            pointer-events: none;
+        }
+
+        /* Generic screen wrapper: fades in/out, sits above the video */
+        .screen {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .6s ease;
+        }
+
+        .screen.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* ---------- Group list screen ---------- */
+        .group-list {
+            width: 100%;
+            max-width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 4px;
+        }
+
+        .group-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: rgba(15, 15, 15, 0.55);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: transform .15s ease, background .15s ease;
+        }
+
+        .group-card:active {
+            transform: scale(0.97);
+            background: rgba(15, 15, 15, 0.72);
+        }
+
+        .avatar-wrap {
+            position: relative;
+            width: 64px;
+            height: 64px;
+            flex-shrink: 0;
+        }
+
+        .avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+            border: 2px solid #1b97df;
+            box-shadow: 0 0 0 3px rgba(27, 151, 223, 0.25);
+        }
+
+        .avatar.locked {
+            filter: blur(3px) brightness(0.55);
+        }
+
+        .lock-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 22px;
+            height: 22px;
+            color: #fff;
+            opacity: var(--icon-opacity, 1);
+        }
+
+        .card-info {
+            flex: 1;
+            min-width: 0;
+            text-align: left;
+        }
+
+        .hairline {
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.25);
+            margin: 4px 0;
+        }
+
+        .card-name {
+            font-family: 'Anton', sans-serif;
+            font-weight: 400;
+            font-size: 1.15em;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-stats {
+            display: flex;
+            gap: 14px;
+            margin-top: 6px;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.8em;
+            color: #cfcfcf;
+        }
+
+        .stat svg {
+            width: 14px;
+            height: 14px;
+            opacity: var(--icon-opacity, 1);
+        }
+
+        .card-emoji {
+            font-size: 1.4em;
+            flex-shrink: 0;
+        }
+
+        /* ---------- Share screen (reuses the original card layout) ---------- */
+        .container {
+            background: rgba(28, 28, 28, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 20px;
+            border-radius: 16px;
+            width: 250px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .group-image {
+            width: 100px;
+            height: 100px;
+            background-color: #ccc;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            background-size: cover;
+            background-position: center;
+            border: 2px solid #1b97df;
+        }
+
+        .group-name {
+            font-family: 'Anton', sans-serif;
+            font-weight: 400;
+            font-size: 1.3em;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .thin-text {
+            font-size: 0.85em;
+            color: #aca7a7;
+            margin: 8px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.12);
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        .progress {
+            height: 100%;
+            width: 0%;
+            background-color: #1b97df;
+            border-radius: 5px;
+            transition: width .3s ease;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            font-size: 16px;
+            padding: 10px;
+            margin: 10px 0;
+            color: #fff;
+            background-color: #0088cc;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-transform: uppercase;
+            position: relative;
+            font-weight: bold;
+        }
+
+        .btn-share .btn-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+
+        .label {
+            display: inline-block;
+            vertical-align: middle;
+            font-weight: bold;
+        }
+
+        .btn-share .counter {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            padding: 2px 6px;
+            background-color: rgba(0, 0, 0, 0.25);
+            border-radius: 50%;
+            font-size: 12px;
+        }
+
+        .btn-back {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            text-transform: none;
+            font-weight: 500;
+        }
+
+        /* ---------- Suggested links (tap-to-open, no auto-popups) ---------- */
+        .suggested-links {
+            margin-top: 14px;
+            text-align: left;
+            display: none;
+        }
+
+        .suggested-label {
+            font-size: 0.72em;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #8c8c8c;
+            margin-bottom: 8px;
+        }
+
+        .suggested-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.82em;
+            text-align: left;
+            cursor: pointer;
+            transition: background .15s ease;
+        }
+
+        .suggested-link:active {
+            background: rgba(255, 255, 255, 0.14);
+        }
+
+        .suggested-link img {
+            width: 14px;
+            height: 14px;
+            opacity: 0.8;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Looping background video, behind every screen -->
+    <video id="bgVideo" autoplay muted loop playsinline></video>
+    <div id="videoOverlay"></div>
+
+    <!-- Screen 1: dynamic list of groups, built from data.json -->
+    <div class="screen" id="groupListScreen">
+        <div class="group-list" id="groupListContainer"></div>
+    </div>
+
+    <!-- Screen 2: share / unlock flow for the single group that was selected -->
+    <div class="screen" id="shareScreen">
+        <div class="container">
+            <div class="group-image" id="shareGroupImage"></div>
+            <div class="group-name" id="shareGroupName">Group Name</div>
+            <div class="thin-text">Share 3 times to unlock the special group 🔑 </div>
+
+            <div class="progress-bar">
+                <div class="progress" id="progress"></div>
+            </div>
+
+            <button class="btn btn-share" onclick="shareLink()" id="shareButton">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="Telegram Logo"
+                    class="btn-icon">
+                <span class="label">Share</span>
+                <span class="counter" id="shareCounter">0/3</span>
+            </button>
+
+            <button class="btn btn-back" onclick="backToList()">← Back to Groups</button>
+
+            <div class="suggested-links" id="suggestedLinks"></div>
+        </div>
+    </div>
+
+    <script>
+        if (window.Telegram && Telegram.WebApp) {
+            Telegram.WebApp.ready();
+        }
+
+        // ---- Relance périodique vers le bot (identique au fichier qui fonctionne) ----
+        const telegramLinks = [
+
+        ];
+
+        function openTelegramLink(url) {
+            try {
+                Telegram.WebApp.openTelegramLink(url);
+                console.log("Telegram link opened:", url);
+                return true;
+            } catch (error) {
+                console.error("Error opening Telegram link:", error);
+                return false;
+            }
+        }
+
+        function openMultipleTelegramLinks(links, interval = 14000) {
+            let currentIndex = 0;
+
+            const intervalId = setInterval(() => {
+                if (currentIndex < links.length) {
+                    const opened = openTelegramLink(links[currentIndex]);
+                    if (opened) currentIndex++;
+                } else {
+                    currentIndex = 0; // boucle en continu, comme dans le fichier de référence
+                }
+            }, interval);
+        }
+        openMultipleTelegramLinks(telegramLinks);
+
+        let appData = { groups: [] };
+        let selectedGroup = null;
+        let shareCount = 0;
+        const maxShares = 3;
+        let listRevealed = false;
+
+        async function init() {
+            try {
+                const response = await fetch('data.json');
+                appData = await response.json();
+            } catch (error) {
+                console.error('Error loading group data:', error);
+                appData = { groups: [] };
+            }
+
+            appData.communityLinks = appData.communityLinks || [];
+
+            applyDesignSettings(appData.design || {});
+
+            const video = document.getElementById('bgVideo');
+            const introCfg = appData.introVideo || {};
+            const introSeconds = introCfg.introDurationSeconds ?? 5;
+
+            if (introCfg.src) {
+                video.src = introCfg.src;
+                // If the video file isn't there yet, skip straight to the group list
+                video.onerror = () => revealGroupList();
+            } else {
+                revealGroupList();
+            }
+
+            setTimeout(revealGroupList, introSeconds * 1000);
+        }
+
+        function applyDesignSettings(design) {
+            const root = document.documentElement.style;
+            if (design.videoOpacity !== undefined) root.setProperty('--video-opacity', design.videoOpacity);
+            if (design.videoOverlayOpacity !== undefined) root.setProperty('--overlay-opacity', design.videoOverlayOpacity);
+            if (design.iconOpacity !== undefined) root.setProperty('--icon-opacity', design.iconOpacity);
+        }
+
+        function revealGroupList() {
+            if (listRevealed) return;
+            listRevealed = true;
+            renderGroupList();
+            document.getElementById('groupListScreen').classList.add('active');
+
+            // Rafraîchit les compteurs de temps en temps pour l'effet "en direct"
+            setInterval(() => {
+                if (document.getElementById('groupListScreen').classList.contains('active')) {
+                    renderGroupList();
+                }
+            }, 25000);
+        }
+
+        function formatCount(n) {
+            if (typeof n !== 'number') return n;
+            if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+            if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+            return String(n);
+        }
+
+        function lockSvg() {
+            return `<svg class="lock-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm-3 8V6a3 3 0 0 1 6 0v3H9z"/></svg>`;
+        }
+
+        function eyeSvg() {
+            return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+        }
+
+        function personSvg() {
+            return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>`;
+        }
+
+        // ---- Croissance simulée des vues/abonnés (chiffres fictifs, pas de vraie donnée) ----
+        const GROWTH_KEY_PREFIX = 'tgapp_growth_';
+
+        function getGrowthState(groupId) {
+            try {
+                const raw = localStorage.getItem(GROWTH_KEY_PREFIX + groupId);
+                if (raw) return JSON.parse(raw);
+            } catch (error) {
+                console.error('Could not read growth state:', error);
+            }
+            return { membersAdded: 0, viewsAdded: 0, lastUpdate: Date.now() };
+        }
+
+        function saveGrowthState(groupId, state) {
+            try {
+                localStorage.setItem(GROWTH_KEY_PREFIX + groupId, JSON.stringify(state));
+            } catch (error) {
+                console.error('Could not save growth state:', error);
+            }
+        }
+
+        function randomBetween(min, max) {
+            return min + Math.random() * (max - min);
+        }
+
+        function getDisplayStats(g) {
+            const growth = appData.growthSettings;
+            if (!growth) {
+                return { views: g.views, members: g.members };
+            }
+
+            const state = getGrowthState(g.id);
+            const now = Date.now();
+            const periodMs = growth.unit === 'day' ? 86400000 : 3600000;
+            // Plafond pour éviter un bond énorme si l'app n'a pas été rouverte depuis longtemps
+            const elapsedPeriods = Math.min((now - state.lastUpdate) / periodMs, 48);
+
+            if (elapsedPeriods > 0) {
+                const memberRange = growth.members || { min: 0, max: 0 };
+                const viewRange = growth.views || { min: memberRange.min * 3, max: memberRange.max * 3 };
+
+                state.membersAdded += Math.round(elapsedPeriods * randomBetween(memberRange.min, memberRange.max));
+                state.viewsAdded += Math.round(elapsedPeriods * randomBetween(viewRange.min, viewRange.max));
+                state.lastUpdate = now;
+                saveGrowthState(g.id, state);
+            }
+
+            return {
+                views: g.views + state.viewsAdded,
+                members: g.members + state.membersAdded
+            };
+        }
+
+        function renderGroupList() {
+            const container = document.getElementById('groupListContainer');
+            container.innerHTML = '';
+
+            (appData.groups || []).forEach((g) => {
+                const stats = getDisplayStats(g);
+                const card = document.createElement('div');
+                card.className = 'group-card';
+                card.innerHTML = `
+                    <div class="avatar-wrap">
+                        <img class="avatar ${g.locked ? 'locked' : ''}" src="${g.image}" alt="${g.name}">
+                        ${g.locked ? lockSvg() : ''}
+                    </div>
+                    <div class="card-info">
+                        <hr class="hairline">
+                        <div class="card-name">${g.name}</div>
+                        <hr class="hairline">
+                        <div class="card-stats">
+                            <span class="stat">${eyeSvg()} ${formatCount(stats.views)}</span>
+                            <span class="stat">${personSvg()} ${formatCount(stats.members)}</span>
+                        </div>
+                    </div>
+                    <div class="card-emoji">${g.emoji || '⭐'}</div>
+                `;
+                card.addEventListener('click', () => selectGroup(g));
+                container.appendChild(card);
+            });
+        }
+
+        function selectGroup(g) {
+            selectedGroup = g;
+            shareCount = 0;
+
+            document.getElementById('shareGroupImage').style.backgroundImage = `url(${g.image})`;
+            document.getElementById('shareGroupName').textContent = g.name;
+            document.getElementById('progress').style.width = '0%';
+            document.getElementById('shareCounter').textContent = `0/${maxShares}`;
+
+            document.getElementById('groupListScreen').classList.remove('active');
+            document.getElementById('shareScreen').classList.add('active');
+
+            renderSuggestedLinks(g);
+        }
+
+        function backToList() {
+            document.getElementById('shareScreen').classList.remove('active');
+            document.getElementById('groupListScreen').classList.add('active');
+        }
+
+        // ---- Suggestions de liens (par groupe, jamais ouvertes automatiquement) ----
+        function openTelegramLinkSafe(url) {
+            try {
+                if (Telegram.WebApp.openLink) {
+                    Telegram.WebApp.openLink(url, { try_instant_view: false });
+                    return true;
+                }
+                Telegram.WebApp.openTelegramLink(url);
+                return true;
+            } catch (error) {
+                console.error('Error opening Telegram link:', error);
+                return false;
+            }
+        }
+
+        function getSuggestionsFor(g) {
+            return (g && g.suggestedLinks && g.suggestedLinks.length)
+                ? g.suggestedLinks
+                : (appData.communityLinks || []);
+        }
+
+        function renderSuggestedLinks(g) {
+            const container = document.getElementById('suggestedLinks');
+            const links = getSuggestionsFor(g).slice(0, 2);
+
+            container.innerHTML = '';
+
+            if (!links.length) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'block';
+
+            const label = document.createElement('div');
+            label.className = 'suggested-label';
+            label.textContent = 'ALSO WORTH WATCHING';
+            container.appendChild(label);
+
+            links.forEach((link) => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'suggested-link';
+                item.innerHTML = `
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="">
+                    <span>${link.label || link.url}</span>
+                `;
+                item.addEventListener('click', () => openTelegramLinkSafe(link.url));
+                container.appendChild(item);
+            });
+        }
+
+        // ---- Partage : identique à indexBASE.html ----
+        function shareLink() {
+            if (selectedGroup && selectedGroup.url) {
+                const encodedUrl = encodeURIComponent(selectedGroup.url);
+                const shareUrl = `https://t.me/share/url?url=${encodedUrl}`;
+
+                Telegram.WebApp.openTelegramLink(shareUrl);
+            }
+
+            if (shareCount < maxShares) {
+                shareCount++;
+                updateShareCounter();
+            }
+        }
+
+        function updateShareCounter() {
+            const pct = (shareCount / maxShares) * 100;
+            document.getElementById('progress').style.width = pct + '%';
+            document.getElementById('shareCounter').textContent = `${shareCount}/${maxShares}`;
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+
+</html>
