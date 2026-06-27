@@ -1,0 +1,78 @@
+{
+  "introVideo": {
+    "src": "video.mp4",
+    "introDurationSeconds": 2
+  },
+  "design": {
+    "videoOpacity": 0.85,
+    "videoOverlayOpacity": 0.3,
+    "iconOpacity": 0.85
+  },
+  "growthSettings": {
+    "unit": "hour",
+    "members": { "min": 3, "max": 15 },
+    "views": { "min": 10, "max": 40 }
+  },
+  "popupMessage": "DONE.",
+  "alertMessage": "DONE.",
+  "communityLinks": [
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "name": "SCHOOL POV 🔞",
+      "url": "http://telecam.me/kSQ4xNkrzvph\n\nhttp://telecam.me/XDOUBLEBANG\n\nJOIN THE GROUP SCHOOL POV 🔞",
+      "image": "images/1.jpg",
+      "views": 149682,
+      "members": 29473,
+      "emoji": "⭐",
+      "locked": true,
+      "suggestedLinks": [
+        { "label": "ONLYGIRLS 1️⃣", "url": "http://telecam.me/kSQ4xNkrzvph" },
+        { "label": "ONLYGIRLS 2️⃣", "url": "http://telecam.me/IFbPOJ6wMWJk" }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "FREAKY 🔞",
+      "url": "http://telecam.me/IFbPOJ6wMWJk\n\nhttp://telecam.me/RATPIMAX\n\nJOIN THE GROUP FREAKY 🔞",
+      "image": "images/2.jpg",
+      "views": 44215,
+      "members": 82764,
+      "emoji": "⭐",
+      "locked": true,
+      "suggestedLinks": [
+        { "label": "ONLYGIRLS 1️⃣", "url": "http://telecam.me/kSQ4xNkrzvph" },
+        { "label": "ONLYGIRLS 2️⃣", "url": "http://telecam.me/IFbPOJ6wMWJk" }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "STEP SISTER 🤸‍♀️💕",
+      "url": "http://telecam.me/KYb6mdNhMjg0\n\nhttp://http://telecam.me/v4rGK3hnmBmz\n\nJOIN THE GROUP STEP SISTER 🤸‍♀️💕",
+      "image": "images/3.jpg",
+      "views": 82764,
+      "members": 15806,
+      "emoji": "⭐",
+      "locked": true,
+      "suggestedLinks": [
+        { "label": "ONLYGIRLS 1️⃣", "url": "http://telecam.me/kSQ4xNkrzvph" },
+        { "label": "ONLYGIRLS 2️⃣", "url": "http://telecam.me/IFbPOJ6wMWJk" }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "BRO 🔞 SIS",
+      "url": "http://telecam.me/KYb6mdNhMjg0\n\nhttp://http://telecam.me/v4rGK3hnmBmz\n\nJOIN THE GROUP BRO 🔞 SIS",
+      "image": "images/4.jpg",
+      "views": 67938,
+      "members": 18437,
+      "emoji": "⭐",
+      "locked": true,
+      "suggestedLinks": [
+        { "label": "ONLYGIRLS 1️⃣", "url": "http://telecam.me/kSQ4xNkrzvph" },
+        { "label": "ONLYGIRLS 2️⃣", "url": "http://telecam.me/IFbPOJ6wMWJk" }
+      ]      
+    }
+  ]
+}
